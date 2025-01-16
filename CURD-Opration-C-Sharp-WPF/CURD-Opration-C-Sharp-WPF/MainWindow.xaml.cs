@@ -11,6 +11,7 @@ using System.Windows.Shapes;
 using System.Data.SqlClient;
 using Microsoft.Data.SqlClient;
 using System.Data;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace CURD_Opration_C_Sharp_WPF
 {
@@ -28,84 +29,169 @@ namespace CURD_Opration_C_Sharp_WPF
         SqlConnection con = new SqlConnection("Data Source=DESKTOP-3C20DQN\\SQLEXPRESS;Initial Catalog=PersonInfo;Integrated Security=True;Encrypt=False");
         public void ClearData() 
         {
+            idtxt.Clear();
             nametxt.Clear();
             agetxt.Clear();
-            gendertxt.Clear();
+            gendertxt.SelectedIndex = -1;
             citytxt.Clear();
         }
 
         public void LoadGrid()
         {
-            SqlCommand cmd = new SqlCommand("SELECT * FROM FirstTable",con);
+            SqlCommand command = new SqlCommand("SELECT * FROM FirstTable",con);
             DataTable dt = new DataTable();
             con.Open();
-            SqlDataReader sdr = cmd.ExecuteReader();
+            SqlDataReader sdr = command.ExecuteReader();
             dt.Load(sdr);
             con.Close();
             datagrid.ItemsSource = dt.DefaultView;
         }
-        private void clearbtn_Click(object sender, RoutedEventArgs e)
-        {
-            ClearData();
-        }
+        
 
-        public bool isValid()
-        {
-            if (nametxt.Text == null) 
-            {
-                MessageBox.Show("Name is Required" , "Failed" , MessageBoxButton.OK , MessageBoxImage.Error);
-                return false;
-            }
-            if (agetxt.Text != null) 
-            {
-                MessageBox.Show("Age is Required", "Failed", MessageBoxButton.OK, MessageBoxImage.Error);
-                return false;
-            }
-            if (gendertxt.Text != null) 
-            {
-                MessageBox.Show("Gender is Required", "Failed", MessageBoxButton.OK, MessageBoxImage.Error);
-                return false;
-            }
-            if (citytxt.Text != null) 
-            { 
-                MessageBox.Show("City Name is Required", "Failed", MessageBoxButton.OK, MessageBoxImage.Error);
-                return false;
-            }
-            return true;
-        }
-       
+        
         private void insertbtn_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-               
-                    SqlCommand cmd = new SqlCommand("INSERT INTO FirstTable VALUES (@Name , @Age , @Gender , @City)", con);
-                    cmd.CommandType = CommandType.Text;
-                    cmd.Parameters.AddWithValue("@Name", nametxt.Text);
-                    cmd.Parameters.AddWithValue("@Age", int.Parse(agetxt.Text));
-                    cmd.Parameters.AddWithValue("@Gender", gendertxt.Text);
-                    cmd.Parameters.AddWithValue("@City", citytxt.Text);
+                if ( int.Parse(idtxt.Text) != 0 && nametxt.Text != "" && int.Parse(agetxt.Text) != 0 && gendertxt.Text != "" && citytxt.Text != "" )
+                {
 
+                    SqlCommand command = new SqlCommand("INSERT INTO FirstTable (ID,Name,Age,Gender,City,InsertDate) VALUES ('"+int.Parse(idtxt.Text)+"' ,'" + nametxt.Text+"' , '"+int.Parse(agetxt.Text)+"' , '"+gendertxt.Text+"' , '"+citytxt.Text+"' , getdate() )", con);
                     con.Open();
-                    cmd.ExecuteNonQuery();
+                    command.ExecuteNonQuery();
+                    MessageBox.Show("Successfullly Inseted.....", "Completed..." , MessageBoxButton.OK , MessageBoxImage.Information);
                     con.Close();
                     LoadGrid();
-
-                    MessageBox.Show("Successfully Inserted", "Saved", MessageBoxButton.OK, MessageBoxImage.Information);
-
                     ClearData();
+                    
+                }
+                else
+                {
+                    if (int.Parse(idtxt.Text) == 0)
+                    {
+                        MessageBox.Show("Enter Valid ID", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+
+                    if (nametxt.Text == "")
+                    {
+                        MessageBox.Show("Enter Valid Name", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+
+                    if (int.Parse(agetxt.Text) == 0 )
+                    {
+                        MessageBox.Show("Enter Valid Age", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+
+                    if (gendertxt.Text == "")
+                    {
+                        MessageBox.Show("Select Your Gender", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+
+                    if (citytxt.Text == "")
+                    {
+                        MessageBox.Show("Enter City Name", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
+
+
+                }
                 
                 
             }
             catch (SqlException ex)
             {
                 MessageBox.Show(ex.Message);
-            }
+            }    
+        }
+
+        private void updatebtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (idtxt.Text != "" && int.Parse(idtxt.Text) != 0)
             {
+                
+                SqlCommand command = new SqlCommand("UPDATE FirstTable SET Name = '" + nametxt.Text + "' , Age = '" + int.Parse(agetxt.Text) + "' , Gender = '" + gendertxt.Text + "' , City = '" + citytxt.Text + "' , UpdateDate = getdate() where ID = '" + int.Parse(idtxt.Text) + "' ", con);
+                con.Open();
+                command.ExecuteNonQuery();
+                con.Close();
+                MessageBox.Show("Successfullly Updated.....", "Completed...", MessageBoxButton.OK , MessageBoxImage.Information );
+                LoadGrid();
+                ClearData();
+            }
+            else
+            {
+                MessageBox.Show("Enter Valid Data" , "Error" , MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+
+
+
+        }
+
+        private void searchbtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (idtxt.Text != "")
+            {
+                con.Open();
+                SqlCommand command = new SqlCommand("Select * From FirstTable where ID = '" + int.Parse(idtxt.Text) + "'", con);
+                SqlDataAdapter adapter = new SqlDataAdapter(command);
+                DataTable dt = new DataTable();
+                adapter.Fill(dt);
+                datagrid.ItemsSource = dt.DefaultView;
+                
+                SqlDataReader reader = command.ExecuteReader();
+
+                if (reader.Read())
+                {
+                    // Fill the fields with the retrieved data
+                    nametxt.Text = reader["Name"].ToString();
+                    agetxt.Text = reader["Age"].ToString();
+                    gendertxt.Text = reader["Gender"].ToString();
+                    citytxt.Text = reader["City"].ToString() ;
+                }
+                else
+                {
+                    MessageBox.Show("No record found with the given ID.", "No Record", MessageBoxButton.OK , MessageBoxImage.Warning);
+                }
+                con.Close();
+                ClearData();
 
             }
-            
-                
+            else
+            {
+                MessageBox.Show("Enter Product ID.... ", "Error", MessageBoxButton.OK , MessageBoxImage.Error);
+            }
         }
+
+        private void deletebtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (idtxt.Text != "")
+            {
+                if (MessageBox.Show("Are you Sure to Delete ? ", "Delete Record", MessageBoxButton.YesNo , MessageBoxImage.Warning) == MessageBoxResult.Yes)
+                {
+                    con.Open();
+                    SqlCommand command = new SqlCommand("DELETE FirstTable where ID = '" + int.Parse(idtxt.Text) + "' ", con);
+                    command.ExecuteNonQuery();
+                    con.Close();
+                    MessageBox.Show("Successfully Deleted...", "Completed..." , MessageBoxButton.OK , MessageBoxImage.Information );
+                    LoadGrid();
+                    ClearData();
+                }
+                else
+                {
+                    con.Close();
+                }
+            }
+            else
+            {
+                MessageBox.Show("Enter ID....", "Error", MessageBoxButton.OK , MessageBoxImage.Error);
+            }
+        }
+
+
+        private void clearbtn_Click(object sender, RoutedEventArgs e)
+        {
+            ClearData();
+        }
+
+
+
     }
 }
